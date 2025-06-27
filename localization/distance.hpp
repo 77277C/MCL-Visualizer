@@ -7,14 +7,14 @@
 #include "Eigen/Geometry"
 #include "constants.hpp"
 
-inline double angleDiff(double a, double b) {
+inline float angleDiff(float a, float b) {
     return std::remainder(b - a, 2 * M_PI);
 }
 
 // Cheap approximation of normpdf (normal distribution PDF)
-double normPdf(double x, double mu = 0.0, double sigma = 1.0) {
-    constexpr double invSqrt2Pi = 0.3989422804014327; // 1 / sqrt(2 * pi)
-    double z = (x - mu) / sigma;
+float normPdf(float x, float mu = 0.0, float sigma = 1.0) {
+    constexpr float invSqrt2Pi = 0.3989422804014327; // 1 / sqrt(2 * pi)
+    float z = (x - mu) / sigma;
     return (invSqrt2Pi / sigma) * std::exp(-0.5 * z * z);
 }
 
@@ -38,7 +38,7 @@ public:
         // Predict the value of the distance sensor by finding the closest wall to it
         // then dividing the distance from the wall by cos(theta) to find the hypotenuse
         // which represents the predicted distance sensor reading
-        double predicted = 50.0;
+        float predicted = 50.0;
 
         if (const auto theta = std::fabs(angleDiff(0, angle)); theta < M_PI_2) {
             predicted = std::min(predicted, (WALL - position.x()) / std::cos(theta));
@@ -62,6 +62,6 @@ public:
 protected:
     Eigen::Vector3f offset;
 
-    double distance;
-    double stddev;
+    float distance;
+    float stddev;
 };
