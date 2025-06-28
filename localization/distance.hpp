@@ -28,12 +28,20 @@ public:
         stddev = 0.2 * distance / std::sqrt(conf / 64.0);
     }
 
-    [[nodiscard]] std::optional<float> getProbability(const Eigen::Vector3f& pose) const {
-        // Get the current absolute angle of the sensor (robot angle + offset angle)
-        const auto angle = pose.z() + offset.z();
+     [[nodiscard]] std::optional<float> getProbability(const Eigen::Vector3f& pose) const {
+        if (distance > 9999 * MM_TO_IN) {
+            return std::nullopt;
+        }
 
-        // Get the current absolute position of the sensor (robot position + offset relative to field)
-        const auto position = pose.head<2>() + Eigen::Rotation2Df(pose.z()) * offset.head<2>();
+        // Rotate only the x,y part of the offset by the particle heading (pose.z())
+        Eigen::Vector2f rotatedOffset =  Eigen::Rotation2Df(pose.z()) * offset.head<2>();
+
+        // Compose the new pose by adding rotated offset to position and adding offset.z() to angle
+        Eigen::Vector3f position = pose;
+        position.head<2>() += rotatedOffset;
+        position.z() += offset.z();
+
+        const auto angle = position.z();
 
         // Predict the value of the distance sensor by finding the closest wall to it
         // then dividing the distance from the wall by cos(theta) to find the hypotenuse
@@ -59,7 +67,7 @@ public:
         return normPdf(distance, predicted, stddev);
     }
 
-protected:
+
     Eigen::Vector3f offset;
 
     float distance;

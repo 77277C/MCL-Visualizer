@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
 #include <random>
 #include <utility>
@@ -10,7 +9,7 @@
 
 
 typedef struct {
-    Eigen::Vector2f location = Eigen::Vector2f::Zero();
+    Eigen::Vector3f location = Eigen::Vector3f::Zero();
     float weight = 1.0;
 } Particle;
 
@@ -18,10 +17,9 @@ typedef struct {
 template<size_t N>
 class ParticleFilter {
 public:
-    const std::function<float()> getAngle;
 
-    explicit ParticleFilter(std::vector<std::unique_ptr<Distance>>& sensors, std::function<float()> getAngle)
-        : sensors(std::move(sensors)), getAngle(std::move(getAngle)) {}
+    explicit ParticleFilter(std::vector<std::unique_ptr<Distance>>& sensors)
+        : sensors(std::move(sensors)) {}
 
     [[nodiscard]] Eigen::Vector3f getPrediction() const {
         return prediction;
@@ -32,7 +30,7 @@ public:
     }
 
     void update(
-        const std::function<Eigen::Vector2f()>& getPrediction
+        const std::function<Eigen::Vector3f()>& getPrediction
     ) {
         // Add the prediction to each particle
         for (auto& particle : particles) {
@@ -49,7 +47,6 @@ public:
             return;
         }
 
-        auto angle = getAngle();
         for (size_t i = 0; i < N; i++) {
             // Place particle at random point in field if out of field
             if (!isPoseInField(particles[i].location)) {
@@ -57,13 +54,8 @@ public:
                 particles[i].location.y() = fieldDistribution(randomGen);
             }
 
-            // Convert the 2d particle to a 3d particle
-            auto particleVector = Eigen::Vector3f();
-            particleVector.head<2>() = particles[i].location;
-            particleVector.z() = angle;
-
             // Weight the particle
-            particles[i].weight = weighParticle(particleVector);
+            particles[i].weight = weighParticle(particles[i].location);
         }
 
         resample();
@@ -71,12 +63,12 @@ public:
         distanceSinceUpdate = 0.0;
     }
 
-    [[nodiscard]] float weighParticle(const Eigen::Vector3f& particleVector) const {
+    [[nodiscard]] float weighParticle(const Eigen::Vector3f& particle) const {
         float combinedWeight = 1.0;
 
         // Multiply the combined weight by the probability of each sensor
         for (auto& sensor : sensors) {
-            const auto weight = sensor->getProbability(particleVector);
+            const auto weight = sensor->getProbability(particle);
             if (weight.has_value()) {
                 combinedWeight *= weight.value();
             }
@@ -85,7 +77,7 @@ public:
         return combinedWeight;
     }
 
-    static bool isPoseInField(const Eigen::Vector2f& pose) {
+    static bool isPoseInField(const Eigen::Vector3f& pose) {
         return (
             pose.x() < WALL &&
             pose.y() < WALL &&
@@ -135,6 +127,7 @@ public:
             // This is effectively cloning a "good guess" multiple times.
             particles[i].location.x() = oldParticles[j-1].location.x();
             particles[i].location.y() = oldParticles[j-1].location.y();
+            particles[i].location.z() = oldParticles[j-1].location.z();
         }
 
         // Estimate the new predicted position as the mean of all resampled particles.
@@ -144,24 +137,26 @@ public:
     Eigen::Vector3f formPrediction() {
         float xSum = 0.0;
         float ySum = 0.0;
+        float thetaSum = 0.0;
 
         for (auto& particle : particles) {
             xSum += particle.location.x();
             ySum += particle.location.y();
+            thetaSum += particle.location.z();
         }
 
         // Estimate the new predicted position as the mean of all resampled particles.
-        return {xSum / static_cast<float>(N), ySum / static_cast<float>(N), getAngle()};
+        return {xSum / static_cast<float>(N), ySum / static_cast<float>(N), thetaSum / static_cast<float>(N)};
     }
 
-    void initNormDist(const Eigen::Vector2f& mean) {
-        std::normal_distribution<> dist{0, STARTING_POS_VARIANCE};
+    void initNormDist(const Eigen::Vector3f& mean) {
+        std::normal_distribution<> posDist{0, STARTING_POS_VARIANCE};
+        std::normal_distribution<> angleDist{0, STARTING_ANGLE_VARIANCE};
 
         for (auto &&particle : this->particles) {
-            particle.location = mean + Eigen::Vector2f(dist(randomGen), dist(randomGen));
+            particle.location = mean + Eigen::Vector3f(posDist(randomGen), posDist(randomGen), angleDist(randomGen));
         }
 
-        prediction.z() = getAngle();
         distanceSinceUpdate += 2.0 * distanceSinceUpdate;
     }
 

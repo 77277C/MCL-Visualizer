@@ -28,7 +28,7 @@ int main() {
         if (code == "change") {
             float dx, dy, dtheta;
             iss >> dx >> dy >> dtheta;
-            chassis.odomUpdate({dx, dy, dtheta});
+            chassis.odomUpdate({dx, dy, -dtheta});
         }
         if (code == "get") {
             for (int i = 0; i < 500; i++) {
@@ -49,7 +49,7 @@ int main() {
             chassis.pf->sensors.at(2)->update(dist, 95.0);
         }
         if (code == "pose") {
-            lemlib::Pose pose = chassis.getPose();
+            lemlib::Pose pose = chassis.getPose(true);
             std::cout << "pose " << pose.x << " " << pose.y << " " << pose.theta << std::endl;
             std::cout.flush();
         }

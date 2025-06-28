@@ -18,12 +18,14 @@ process = subprocess.Popen(
 # Dictionary to store particle data received from the localization program
 particles = {}
 
+mcl_pose = (0, 0, 0)
+
 # ======= 2. BACKGROUND THREADS FOR PROCESS I/O =======
 # Continuously read stdout lines from the localization process.
 # Updates 'particles' dictionary on lines starting with 'particle'.
 # Prints position on lines starting with 'pose'.
 def refresh_particles():
-    global predicted_pose
+    global predicted_pose, mcl_pose
     while True:
         line = process.stdout.readline()
         if not line:
@@ -33,15 +35,8 @@ def refresh_particles():
             _, idx, x, y, w = line.split()
             particles[int(idx)] = (float(x), float(y))
         elif line.startswith("pose"):
-            _, x, y, _ = line.split()
-            x, y = float(x), float(y)
-
-            # Convert from pygame pixels to Cartesian inches
-            actual_x = (robot_x - WIDTH // 2) * conv
-            actual_y = -(robot_y - HEIGHT // 2) * conv
-
-            dist = math.hypot(x - actual_x, y - actual_y)
-            print(f'Predicted pose: {(x, y)} Actual pose: {(actual_x, actual_y)} Distance: {dist:.2f}in')
+            _, x, y, theta = line.split()
+            mcl_pose = (float(x), float(y), float(theta))
         else:
             # Print other output messages for debugging
             print(line.strip())
@@ -98,9 +93,9 @@ pygame.display.set_caption("Robot Visualizer")
 clock = pygame.time.Clock()
 
 # Initial robot pose (offset from center)
-robot_x = WIDTH // 2 + 20
-robot_y = HEIGHT // 2 + 20
-robot_angle = 0
+robot_x = WIDTH // 2 + 10
+robot_y = HEIGHT // 2 + 10
+robot_angle = 10 * (math.pi / 180)
 # Keep previous pose for odometry
 previous_robot_x = robot_x
 previous_robot_y = robot_y
@@ -181,7 +176,20 @@ while running:
     else:
         robot_angle = math.atan2(dy, dx)
     half = ROBOT_SIZE / 2
+
+    # Convert MCL pose (inches) to screen coordinates
+    screen_x = WIDTH // 2 + mcl_pose[0] * PIXELS_PER_INCH
+    screen_y = HEIGHT // 2 - mcl_pose[1] * PIXELS_PER_INCH  # invert Y axis
+
+    # Draw a semi-transparent quadrilateral for MCL pose
+    half = ROBOT_SIZE / 2
     corners = []
+    for off_x, off_y in [(-half, -half), (half, -half), (half, half), (-half, half)]:
+        rx, ry = rotate_point(0, 0, off_x, off_y, mcl_pose[2])
+        corners.append((screen_x + rx, screen_y + ry))
+    pygame.draw.polygon(screen, (200, 200, 200), corners)
+
+    corners.clear()
     for off_x, off_y in [(-half, -half), (half, -half), (half, half), (-half, half)]:
         rx, ry = rotate_point(0, 0, off_x, off_y, robot_angle)
         corners.append((robot_x + rx, robot_y + ry))
