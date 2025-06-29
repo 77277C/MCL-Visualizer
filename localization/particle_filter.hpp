@@ -1,8 +1,6 @@
 #pragma once
 
-#include <memory>
 #include <random>
-#include <utility>
 
 #include "distance.hpp"
 #include "constants.hpp"
@@ -17,15 +15,14 @@ typedef struct {
 template<size_t N>
 class ParticleFilter {
 public:
-
-    explicit ParticleFilter(std::vector<std::unique_ptr<Distance>>& sensors)
-        : sensors(std::move(sensors)) {}
+    explicit ParticleFilter(const std::vector<Distance*>& sensors)
+        : sensors(sensors) {}
 
     [[nodiscard]] Eigen::Vector3f getPrediction() const {
         return prediction;
     }
 
-    [[nodiscard]] const std::ranlux24_base& getRandomGen() const {
+    [[nodiscard]] std::ranlux24_base& getRandomGen() {
         return randomGen;
     }
 
@@ -165,7 +162,7 @@ public:
 
     std::array<Particle, N> particles;
     std::array<Particle, N> oldParticles;
-    std::vector<std::unique_ptr<Distance>> sensors;
+    std::vector<Distance*> sensors;
 
     std::ranlux24_base randomGen;
     std::uniform_real_distribution<> fieldDistribution{-WALL, WALL};

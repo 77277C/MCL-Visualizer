@@ -93,9 +93,9 @@ pygame.display.set_caption("Robot Visualizer")
 clock = pygame.time.Clock()
 
 # Initial robot pose (offset from center)
-robot_x = WIDTH // 2 + 10
-robot_y = HEIGHT // 2 + 10
-robot_angle = 10 * (math.pi / 180)
+robot_x = WIDTH // 2 + 0
+robot_y = HEIGHT // 2 + 0
+robot_angle = 0 * (math.pi / 180)
 # Keep previous pose for odometry
 previous_robot_x = robot_x
 previous_robot_y = robot_y

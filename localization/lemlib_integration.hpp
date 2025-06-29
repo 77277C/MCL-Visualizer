@@ -9,14 +9,13 @@
 template<size_t N>
 class ParticleFilterChassis: public lemlib::Chassis {
 public:
-    explicit ParticleFilterChassis(std::vector<std::unique_ptr<Distance>>& pfSensors) {
-        pf = std::make_unique<ParticleFilter<N>>(pfSensors);
-    }
+    explicit ParticleFilterChassis(const std::vector<Distance*>& pfSensors)
+    : pf(ParticleFilter<N>(pfSensors))  {}
 
     void setPose(float x, float y, float theta, bool radians = false, bool resetParticles = true) {
         Chassis::setPose(x, y, theta, radians);
         if (resetParticles) {
-            pf->initNormDist({x, y, getPose(true, true).theta});
+            pf.initNormDist({x, y, getPose(true, true).theta});
         }
     }
 
@@ -31,9 +30,9 @@ public:
         std::uniform_real_distribution angleDistribution(change.theta - ANGLE_NOISE * std::fabs(change.theta),
                                                           change.theta + ANGLE_NOISE * std::fabs(change.theta));
 
-        static auto randomGen = pf->getRandomGen();
+        static auto& randomGen = pf.getRandomGen();
 
-        pf->update([&]() {
+        pf.update([&]() {
             const auto noisyX = xDistribution(randomGen);
             const auto noisyY = yDistribution(randomGen);
             const auto noisyTheta = angleDistribution(randomGen);
@@ -43,13 +42,13 @@ public:
         });
 
         // Set the pose to be the filters prediction
-        const auto prediction = pf->getPrediction();
+        const auto prediction = pf.getPrediction();
         setPose(prediction.x(), prediction.y(), M_PI_2 - prediction.z(), true, false);
     }
 
 
-    std::unique_ptr<ParticleFilter<N>> pf;
-    unsigned long long updateTimeMicros= 0;
+    ParticleFilter<N> pf;
+    unsigned long long updateTimeMicros = 0;
 };
 
 
