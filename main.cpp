@@ -3,6 +3,9 @@
 #include "localization/lemlib_integration.hpp"
 
 
+#define N 500
+
+
 int main() {
     Distance left(Eigen::Vector3f(0, 0, M_PI_2));
     Distance front(Eigen::Vector3f(0, 0, 0));
@@ -10,7 +13,7 @@ int main() {
 
     std::vector<Distance*> distances = {&left, &front, &right};
 
-    ParticleFilterChassis<500> chassis(distances);
+    ParticleFilterChassis<N> chassis(distances);
     chassis.setPose(0, 0, 90, false, true);
 
     std::string line;
@@ -28,22 +31,22 @@ int main() {
             chassis.odomUpdate({dx, dy, -dtheta});
         }
         if (code == "get") {
-            for (int i = 0; i < 500; i++) {
+            for (int i = 0; i < N; i++) {
                 std::cout << "particle "<< i << " " << chassis.pf.particles[i].location.x() << " " << chassis.pf.particles[i].location.y() << " " << chassis.pf.particles[i].weight << std::endl;
             }
             std::cout.flush();
         }
         if (code == "left") {
             float dist; iss >> dist;
-            left.update(dist, 95.0);
+            left.update(dist, 63.0);
         }
         if (code == "front") {
             float dist; iss >> dist;
-            front.update(dist, 95.0);
+            front.update(dist, 63.0);
         }
         if (code == "right") {
             float dist; iss >> dist;
-            right.update(dist, 95.0);
+            right.update(dist, 63.0);
         }
         if (code == "pose") {
             lemlib::Pose pose = chassis.getPose(true);

@@ -8,7 +8,7 @@
 
 typedef struct {
     Eigen::Vector3f location = Eigen::Vector3f::Zero();
-    float weight = 1.0;
+    double weight = 1.0;
 } Particle;
 
 
@@ -44,15 +44,15 @@ public:
             return;
         }
 
-        for (size_t i = 0; i < N; i++) {
+        for (auto& particle : particles) {
             // Place particle at random point in field if out of field
-            if (!isPoseInField(particles[i].location)) {
-                particles[i].location.x() = fieldDistribution(randomGen);
-                particles[i].location.y() = fieldDistribution(randomGen);
+            if (!isPoseInField(particle.location)) {
+                particle.location.x() = fieldDistribution(randomGen);
+                particle.location.y() = fieldDistribution(randomGen);
             }
 
             // Weight the particle
-            particles[i].weight = weighParticle(particles[i].location);
+            particle.weight = weighParticle(particle.location);
         }
 
         resample();
@@ -60,13 +60,13 @@ public:
         distanceSinceUpdate = 0.0;
     }
 
-    [[nodiscard]] float weighParticle(const Eigen::Vector3f& particle) const {
-        float combinedWeight = 1.0;
+    [[nodiscard]] double weighParticle(const Eigen::Vector3f& particle) const {
+        double combinedWeight = 1.0;
 
         // Multiply the combined weight by the probability of each sensor
         for (auto& sensor : sensors) {
             const auto weight = sensor->getProbability(particle);
-            if (weight.has_value()) {
+            if (weight.has_value() && std::isfinite(weight.value())) {
                 combinedWeight *= weight.value();
             }
         }
@@ -84,7 +84,7 @@ public:
     }
 
     void resample() {
-        float totalWeight = 0.0;
+        double totalWeight = 0.0;
 
         // Sum all particle weights and make a copy of the current set.
         // Think of each particle's weight as a slice in a pie chart of "trust" — bigger slices = more believable.
@@ -95,7 +95,7 @@ public:
 
         // Compute the average weight across all particles.
         // This defines the spacing between our sampling points on the pie chart.
-        const float avgWeight = totalWeight / static_cast<float>(N);
+        const double avgWeight = totalWeight / static_cast<double>(N);
 
         // Choose a random starting offset within [0, avg_weight)
         // This is like randomly placing the first pointer on the pie chart.
@@ -103,12 +103,12 @@ public:
         const auto randomWeight = distribution(randomGen);
 
         size_t j = 0;
-        float cumulativeWeight = 0.0;
+        double cumulativeWeight = 0.0;
 
         // Resample N particles using low-variance resampling.
         // We place N evenly spaced markers on the cumulative weight pie chart, starting from random_weight.
         for (size_t i = 0; i < N; i++) {
-            const auto weight = static_cast<float>(i) * avgWeight + randomWeight;
+            const auto weight = static_cast<double>(i) * avgWeight + randomWeight;
 
             // Walk through the cumulative weights until we find the particle that spans the current weight.
             // Particles with bigger weight slices will get hit more often — they're more likely to survive.
