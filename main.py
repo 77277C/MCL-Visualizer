@@ -175,13 +175,17 @@ while running:
     mx, my = pygame.mouse.get_pos()
     dx, dy = mx - robot_x, my - robot_y
     dist = math.hypot(dx, dy)
-    if dist > SPEED:
+    if dist > 1:
+        # Adjust multiplier and max_speed as needed
+        max_speed = 4  # prevent excessive speed
+        speed = min(dist * 0.05, max_speed)
         theta = math.atan2(dy, dx)
-        robot_x += SPEED * math.cos(theta)
-        robot_y += SPEED * math.sin(theta)
+        robot_x += speed * math.cos(theta)
+        robot_y += speed * math.sin(theta)
         robot_angle = theta
     else:
         robot_angle = math.atan2(dy, dx)
+
     half = ROBOT_SIZE / 2
 
     # Convert MCL pose (inches) to screen coordinates

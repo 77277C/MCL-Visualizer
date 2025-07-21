@@ -23,21 +23,18 @@ public:
         lemlib::update(change);
 
 
-        std::uniform_real_distribution<> xDistribution{change.x - DRIVE_NOISE * std::fabs(change.x),
-                                                          change.x + DRIVE_NOISE * std::fabs(change.x)};
-        std::uniform_real_distribution<> yDistribution{change.y - DRIVE_NOISE * std::fabs(change.y),
-                                                    change.y + DRIVE_NOISE * std::fabs(change.y)};
-        std::uniform_real_distribution angleDistribution(change.theta - ANGLE_NOISE * std::fabs(change.theta),
-                                                          change.theta + ANGLE_NOISE * std::fabs(change.theta));
+        std::normal_distribution<> xDistribution(0, DRIVE_NOISE * std::fabs(change.x) + 0.001);
+        std::normal_distribution<> yDistribution(0, DRIVE_NOISE * std::fabs(change.y) + 0.001);
+        std::normal_distribution<> angleDistribution(0, ANGLE_NOISE * std::fabs(change.theta) + 0.001);
 
         static auto& randomGen = pf.getRandomGen();
 
-        pf.update([&]() {
-            const auto noisyX = xDistribution(randomGen);
-            const auto noisyY = yDistribution(randomGen);
-            const auto noisyTheta = angleDistribution(randomGen);
+        // No risk of dangling reference
+        pf.update([&xDistribution, &yDistribution, &angleDistribution, &change]() {
+            const auto noisyX = change.x + xDistribution(randomGen);
+            const auto noisyY = change.y + yDistribution(randomGen);
+            const auto noisyTheta = change.theta + angleDistribution(randomGen);
 
-            // Create a vector from noisyX and noisyY and rotate it by possible angular noise
             return Eigen::Vector3f(noisyX, noisyY, noisyTheta);
         });
 
